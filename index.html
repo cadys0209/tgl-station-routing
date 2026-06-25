@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TGL Inquiry Station Routing</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f7fa;
+    color: #1a2340;
+    min-height: 100vh;
+    padding: 20px 16px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .logo {
+    background: #003087;
+    color: white;
+    font-weight: 900;
+    font-size: 17px;
+    padding: 8px 13px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+  }
+  h1 { font-size: 19px; font-weight: 700; color: #003087; }
+  .subtitle { font-size: 12px; color: #888; margin-top: 2px; }
+
+  .search-section {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .search-wrapper { position: relative; }
+  #searchInput {
+    width: 100%;
+    padding: 11px 15px;
+    font-size: 15px;
+    border: 2px solid #e0e4ef;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fafbfd;
+    color: #1a2340;
+  }
+  #searchInput:focus { border-color: #003087; background: white; }
+  #searchInput::placeholder { color: #aab; }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: white;
+    border: 1px solid #e0e4ef;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+  }
+  .dropdown.show { display: block; }
+  .dropdown-group-label {
+    padding: 6px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #f8f9fb;
+    border-bottom: 1px solid #eee;
+  }
+  .dropdown-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f4f4f4;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: #f0f4ff; }
+  .region-tag {
+    font-size: 10px;
+    color: #999;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .result-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .result-header {
+    background: #003087;
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .station-name { font-size: 17px; font-weight: 700; }
+  .origin-label { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .station-badge {
+    background: #FF6B35;
+    color: white;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .result-body { padding: 18px 20px; }
+  .info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f2f2f2;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-icon {
+    width: 30px; height: 30px;
+    background: #eef1fb;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .info-label {
+    font-size: 10px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+  }
+  .info-value { font-size: 13px; color: #1a2340; line-height: 1.6; }
+  .email-link { color: #003087; text-decoration: none; font-weight: 600; }
+  .email-link:hover { text-decoration: underline; }
+  .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    padding: 2px 7px;
+    border: 1px solid #003087;
+    color: #003087;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { background: #003087; color: white; }
+  .copy-btn.copied { background: #28a745; border-color: #28a745; color: white; }
+
+  .contact-entry { margin-bottom: 6px; }
+  .contact-entry:last-child { margin-bottom: 0; }
+  .contact-role { font-size: 11px; color: #999; }
+
+  .coverage-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .coverage-chip {
+    background: #eef1fb;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: #003087;
+  }
+  .coverage-chip.highlight {
+    background: #003087;
+    color: white;
+    font-weight: 700;
+  }
+
+  .warning-banner {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: #856404;
+    line-height: 1.5;
+  }
+
+  .placeholder-state {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    text-align: center;
+    padding: 40px 20px;
+    color: #bbb;
+  }
+  .placeholder-state .big-icon { font-size: 38px; margin-bottom: 10px; }
+  .placeholder-state p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">TGL</div>
+  <div>
+    <h1>Inquiry Station Routing</h1>
+    <div class="subtitle">Type an origin to find the responsible TGL station instantly</div>
+  </div>
+</div>
+
+<div class="search-section">
+  <label>Origin Location — Country or China Province / City</label>
+  <div class="search-wrapper">
+    <input type="text" id="searchInput" placeholder="e.g.  Guangdong,  Vietnam,  Zhejiang,  Malaysia…" autocomplete="off">
+    <div class="dropdown" id="dropdown"></div>
+  </div>
+</div>
+
+<div id="placeholderState" class="placeholder-state">
+  <div class="big-icon">🗺️</div>
+  <p>Search an origin location above to see the assigned TGL station and contact details.</p>
+</div>
+
+<div class="result-card" id="resultCard">
+  <div class="result-header">
+    <div>
+      <div class="origin-label" id="originLabel">Origin</div>
+      <div class="station-name" id="stationName">—</div>
+    </div>
+    <div class="station-badge" id="stationBadge">STATION</div>
+  </div>
+  <div class="result-body" id="resultBody"></div>
+</div>
+
+<script>
+const stations = {
+  tianjin: {
+    name: 'Tianjin Office',
+    badge: 'CN · TIANJIN',
+    address: 'Room B1105, No.99, Liuwei Road, Hedong District, Tianjin 300171 P.R.C.',
+    contacts: [
+      { name: 'Rachel Young', role: 'Station Manager', email: 'rachel_y@tgl-group.net' },
+      { name: 'Emilly Huan', role: 'Specialist, Ocean', email: 'emilly_huan@tgl-group.net' }
+    ],
+    groupEmail: null,
+    phone: '+86-22-2413 2257',
+    coverage: ['Beijing','Tianjin','Xinjiang','Hebei','Gansu','Qinghai','Ningxia','Shanxi','Shaanxi','Liaoning','Jilin','Heilongjiang','Dalian']
+  },
+  qingdao: {
+    name: 'Qingdao Office',
+    badge: 'CN · QINGDAO',
+    address: 'Room 202, No.10, Laoshan Road, Laoshan District, Qingdao 266000 P.R.C.',
+    contacts: [
+      { name: 'Joyce Jin', role: 'Supervisor', email: 'joyce_jin@tgl-group.net' }
+    ],
+    groupEmail: null,
+    phone: '+86 532-8801 5380',
+    coverage: ['Shandong','Qingdao']
+  },
+  shanghai: {
+    name: 'Shanghai Office',
+    badge: 'CN · SHANGHAI',
+    address: '15G, West Building Hi-Tech King World, No.668 Beijing Road (E), Shanghai 200001 P.R.C.',
+    contacts: [
+      { name: 'Ariel Tao', role: 'Ocean Export', email: 'ariel_tao@tgl-group.net' },
+      { name: 'Michael Yao', role: 'Air Export', email: 'michael_yao@tgl-group.net' },
+      { name: 'Esther Xu', role: 'Import', email: 'esther_xu@tgl-group.net' }
+    ],
+    groupEmail: 'shaocean@tgl-group.net',
+    phone: '+86-21-5109 6288',
+    coverage: ['Shanghai','Hubei','Anhui','Jiangsu','Nanjing','Chongqing','Sichuan','Henan','Hunan',"Xi'an"]
+  },
+  ningbo: {
+    name: 'Ningbo Office',
+    badge: 'CN · NINGBO',
+    address: 'Rm 2302, 23F, New Hualian Square, No.55 Dong Du Road, Ningbo 315040 P.R.C.',
+    contacts: [
+      { name: 'Evan Yao', role: 'Station Manager', email: 'evan_yao@tgl-group.net' },
+      { name: 'Jane Hu', role: 'Specialist', email: 'jane_hu@tgl-group.net' },
+      { name: 'Amanda Gan', role: 'Specialist', email: 'Amanda_gan@tgl-group.net' }
+    ],
+    groupEmail: null,
+    phone: '+86-574-8387 6658',
+    coverage: ['Zhejiang','Ningbo']
+  },
+  xiamen: {
+    name: 'Xiamen Office',
+    badge: 'CN · XIAMEN',
+    address: 'Room 422, Bonded Goods Market Building, No.88 Xiang Yu Road, Huli District, Xiamen P.R.C.',
+    contacts: [
+      { name: 'Ken Fang', role: 'Station Manager', email: 'ken_fang@tgl-group.net' },
+      { name: 'Katherine Jiang', role: 'Specialist, Ocean', email: 'katherine_jiang@tgl-group.net' },
+      { name: 'Hong Fang', role: 'Specialist, Ocean', email: 'hong_fang@tgl-group.net' }
+    ],
+    groupEmail: null,
+    phone: '+86-592-5681719',
+    coverage: ['Fujian','Xiamen']
+  },
+  shenzhen: {
+    name: 'Shenzhen Office',
+    badge: 'CN · SHENZHEN',
+    address: 'Room 2303, Tower A, Reith International Building, No.1002 Yanhe North Rd., Luo Hu District, Shenzhen P.R.C.',
+    contacts: [
+      { name: 'Cofe Zuo', role: 'Station Manager', email: 'cofe_zuo@tgl-group.net' },
+      { name: 'Cindy Zhou', role: 'Supervisor, Ocean', email: 'cindy_zhou@tgl-group.net' },
+      { name: 'Connie Yao', role: 'Supervisor, Air/Import', email: 'connie_yao@tgl-group.net' }
+    ],
+    groupEmail: null,
+    phone: '+86-755-2583 3735 (Ocean) · +86-755-2583 5590 (Air)',
+    coverage: ['Yunnan','Guizhou','Guangxi','Guangdong','Hainan','Hong Kong','Macao','Yantian','Shenzhen']
+  },
+  gsc: {
+    name: 'GSC — Taipei HQ',
+    badge: 'GSC',
+    address: '3F, No.512-1, Sec 4, Bade Road, Taipei, Taiwan (also covers Malaysia & Singapore offices)',
+    contacts: [
+      { name: 'Cathy Chen', role: 'Station Manager', email: 'cathy_chen@tgl-group.net' },
+      { name: 'Abrina Chung', role: 'Specialist, Ocean', email: 'abrina_chung@tgl-group.net' },
+      { name: 'Patty Chen', role: 'Specialist, Air', email: 'patty_chen@tgl-group.net' }
+    ],
+    groupEmail: 'gsc@tgl-group.net',
+    phone: '+886-2-2769 8656',
+    coverage: ['Taiwan','Malaysia','Singapore','Philippines','Indonesia','Myanmar','Cambodia','Laos','Brunei','Bangladesh','Sri Lanka','Other SE Asia']
+  },
+  vietnam: {
+    name: 'Vietnam Office — HCM',
+    badge: 'VN · HCM',
+    address: '5B Fl, No.06-10 Cuu Long Street, Tan Son Hoa Ward, Ho Chi Minh City, Vietnam',
+    contacts: [
+      { name: 'Joey Dang', role: 'Supervisor', email: 'joey_dang@tgl-group.net' },
+      { name: 'Chloe Chau', role: 'Specialist', email: 'chloe_chau@tgl-group.net' }
+    ],
+    groupEmail: 'hcm@tgl-group.net',
+    phone: '+84-28-3848 9482',
+    coverage: ['Vietnam']
+  },
+  thailand: {
+    name: 'Thailand Office — Bangkok',
+    badge: 'TH · BKK',
+    address: 'No.44, Srijulsup Building, 11F, Unit 2, Rama I Road, Pathumwan, Bangkok 10330',
+    contacts: [
+      { name: 'Pornprapha Sang-Arun', role: 'Specialist', email: 'pornprapha_s@tgl-group.net' },
+      { name: 'Nattakarn M.', role: 'Specialist', email: 'nattakarn_m@tgl-group.net' }
+    ],
+    groupEmail: 'bkk@tgl-group.net',
+    phone: '+66 92-336-0388',
+    coverage: ['Thailand']
+  }
+};
+
+const routingMap = {
+  'beijing':'tianjin','tianjin':'tianjin','xinjiang':'tianjin','hebei':'tianjin',
+  'gansu':'tianjin','qinghai':'tianjin','ningxia':'tianjin','shanxi':'tianjin',
+  'shaanxi':'tianjin','liaoning':'tianjin','jilin':'tianjin','heilongjiang':'tianjin','dalian':'tianjin',
+  'shandong':'qingdao','qingdao':'qingdao',
+  'shanghai':'shanghai','hubei':'shanghai','anhui':'shanghai','jiangsu':'shanghai',
+  'nanjing':'shanghai','chongqing':'shanghai','sichuan':'shanghai','henan':'shanghai',
+  'hunan':'shanghai',"xi'an":'shanghai','xian':'shanghai',
+  'zhejiang':'ningbo','ningbo':'ningbo',
+  'fujian':'xiamen','xiamen':'xiamen',
+  'jiangxi':'shanghai',
+  'yunnan':'shenzhen','guizhou':'shenzhen','guangxi':'shenzhen','guangdong':'shenzhen',
+  'hainan':'shenzhen','hong kong':'shenzhen','hongkong':'shenzhen','macao':'shenzhen',
+  'macau':'shenzhen','yantian':'shenzhen','shenzhen':'shenzhen',
+  'taiwan':'gsc','malaysia':'gsc','singapore':'gsc','philippines':'gsc',
+  'indonesia':'gsc','myanmar':'gsc','cambodia':'gsc','laos':'gsc',
+  'brunei':'gsc','bangladesh':'gsc','sri lanka':'gsc',
+  'vietnam':'vietnam','thailand':'thailand'
+};
+
+const ambiguousNote = {
+  'jiangxi': '⚠️ <strong>Jiangxi</strong> appears in both <strong>Shanghai</strong> and <strong>Xiamen</strong> coverage maps. Confirm based on the actual loading port.'
+};
+
+// City → province, so pasted street addresses resolve even when they only name the city
+// (e.g. "…Maan Town Huizhou 516057" → guangdong → Shenzhen).
+const cityList = [
+  // Guangdong → Shenzhen
+  ['Huizhou','guangdong'],['Dongguan','guangdong'],['Guangzhou','guangdong'],['Foshan','guangdong'],
+  ['Zhongshan','guangdong'],['Zhuhai','guangdong'],['Jiangmen','guangdong'],['Shantou','guangdong'],
+  ['Zhaoqing','guangdong'],['Qingyuan','guangdong'],['Heyuan','guangdong'],['Maoming','guangdong'],
+  ['Zhanjiang','guangdong'],['Shaoguan','guangdong'],['Meizhou','guangdong'],['Yangjiang','guangdong'],
+  ['Chaozhou','guangdong'],['Jieyang','guangdong'],['Yunfu','guangdong'],['Shanwei','guangdong'],
+  // Zhejiang → Ningbo
+  ['Hangzhou','zhejiang'],['Wenzhou','zhejiang'],['Jinhua','zhejiang'],['Yiwu','zhejiang'],
+  ['Shaoxing','zhejiang'],['Taizhou','zhejiang'],['Jiaxing','zhejiang'],['Huzhou','zhejiang'],
+  ['Quzhou','zhejiang'],['Lishui','zhejiang'],['Zhoushan','zhejiang'],
+  // Jiangsu → Shanghai
+  ['Suzhou','jiangsu'],['Wuxi','jiangsu'],['Changzhou','jiangsu'],['Nantong','jiangsu'],
+  ['Kunshan','jiangsu'],['Yangzhou','jiangsu'],['Xuzhou','jiangsu'],['Zhenjiang','jiangsu'],['Taicang','jiangsu'],
+  // Fujian → Xiamen
+  ['Fuzhou','fujian'],['Quanzhou','fujian'],['Putian','fujian'],['Zhangzhou','fujian'],
+  // Shandong → Qingdao
+  ['Jinan','shandong'],['Yantai','shandong'],['Weihai','shandong'],['Weifang','shandong'],
+  ['Zibo','shandong'],['Linyi','shandong'],
+  // Other provinces → their station
+  ['Wuhan','hubei'],['Changsha','hunan'],['Zhengzhou','henan'],['Luoyang','henan'],
+  ['Chengdu','sichuan'],['Hefei','anhui'],['Nanchang','jiangxi'],['Ganzhou','jiangxi'],
+  // North / Northeast (all → Tianjin)
+  ['Dalian','dalian'],['Shenyang','liaoning'],['Changchun','jilin'],['Harbin','heilongjiang'],
+  ['Shijiazhuang','hebei'],['Tangshan','hebei'],['Baoding','hebei'],['Taiyuan','shanxi'],
+  ['Lanzhou','gansu'],['Urumqi','xinjiang'],
+
+  // ── Chinese-language names (factory addresses are often in 中文) ──
+  // Guangdong → Shenzhen
+  ['广东','guangdong'],['深圳','shenzhen'],['东莞','guangdong'],['广州','guangdong'],
+  ['佛山','guangdong'],['惠州','guangdong'],['中山','guangdong'],['珠海','guangdong'],
+  ['江门','guangdong'],['汕头','guangdong'],['盐田','shenzhen'],
+  // Zhejiang → Ningbo
+  ['浙江','zhejiang'],['宁波','zhejiang'],['杭州','zhejiang'],['义乌','zhejiang'],['温州','zhejiang'],['绍兴','zhejiang'],
+  // Jiangsu / Shanghai
+  ['江苏','jiangsu'],['苏州','jiangsu'],['昆山','jiangsu'],['无锡','jiangsu'],['南京','jiangsu'],['上海','shanghai'],
+  // Fujian → Xiamen
+  ['福建','fujian'],['厦门','xiamen'],['泉州','fujian'],['福州','fujian'],
+  // Shandong → Qingdao
+  ['山东','shandong'],['青岛','qingdao'],['烟台','shandong'],['济南','shandong'],
+  // Inland → Shanghai
+  ['四川','sichuan'],['成都','sichuan'],['重庆','chongqing'],['湖北','hubei'],['武汉','hubei'],
+  ['湖南','hunan'],['长沙','hunan'],['河南','henan'],['郑州','henan'],['安徽','anhui'],['合肥','anhui'],['江西','jiangxi'],
+  // South / SW → Shenzhen
+  ['广西','guangxi'],['云南','yunnan'],['贵州','guizhou'],['海南','hainan'],['香港','hongkong'],['澳门','macao'],
+  // North → Tianjin
+  ['北京','beijing'],['天津','tianjin'],['河北','hebei'],['辽宁','liaoning'],['大连','dalian'],
+  // GSC
+  ['台湾','taiwan'],['台灣','taiwan'],['越南','vietnam'],['泰国','thailand']
+];
+const cityToProvince = {};
+cityList.forEach(function(c) { cityToProvince[c[0].toLowerCase()] = c[1]; });
+
+const allItems = [
+  ...['Beijing','Tianjin','Xinjiang','Hebei','Gansu','Qinghai','Ningxia','Shanxi','Shaanxi',
+      'Liaoning','Jilin','Heilongjiang','Dalian','Shandong','Qingdao','Shanghai','Hubei','Anhui',
+      'Jiangsu','Nanjing','Chongqing','Sichuan','Henan','Hunan',"Xi'an",'Jiangxi','Zhejiang',
+      'Ningbo','Fujian','Xiamen','Yunnan','Guizhou','Guangxi','Guangdong','Hainan',
+      'Hong Kong','Macao','Yantian','Shenzhen'
+  ].map(l => ({ label: l, type: 'China' })),
+  ...['Taiwan','Malaysia','Singapore','Vietnam','Thailand','Philippines','Indonesia',
+      'Myanmar','Cambodia','Laos','Brunei','Bangladesh','Sri Lanka'
+  ].map(l => ({ label: l, type: 'Country' })),
+  ...cityList.map(function(c) { return { label: c[0], type: 'China' }; })
+];
+
+const input     = document.getElementById('searchInput');
+const dropdown  = document.getElementById('dropdown');
+const resultCard  = document.getElementById('resultCard');
+const placeholder = document.getElementById('placeholderState');
+
+input.addEventListener('input', function() {
+  var val = input.value.trim().toLowerCase();
+  if (!val) { dropdown.classList.remove('show'); return; }
+
+  // Forward match: label contains what user typed (e.g. "Guang" → Guangxi, Guangdong)
+  var matches = allItems.filter(function(i) {
+    return i.label.toLowerCase().indexOf(val) !== -1;
+  });
+
+  // Reverse match: typed text contains a known label (e.g. full address with "Guangxi" inside)
+  if (!matches.length) {
+    var found = allItems.filter(function(i) {
+      return val.indexOf(i.label.toLowerCase()) !== -1;
+    });
+    found.sort(function(a, b) { return b.label.length - a.label.length; }); // longest = most specific
+    if (found.length) {
+      // Auto-route directly — no dropdown needed
+      dropdown.classList.remove('show');
+      showResult(found[0].label.toLowerCase(), found[0].label);
+      return;
+    }
+    dropdown.innerHTML = '<div class="dropdown-item" style="color:#aaa;font-style:italic;">No results found — try just the province or country name</div>';
+    dropdown.classList.add('show');
+    return;
+  }
+
+  var china   = matches.filter(function(m) { return m.type === 'China'; });
+  var country = matches.filter(function(m) { return m.type === 'Country'; });
+  var html = '';
+  if (china.length) {
+    html += '<div class="dropdown-group-label">🇨🇳 China Province / City</div>';
+    china.forEach(function(m) {
+      html += '<div class="dropdown-item" data-key="' + m.label.toLowerCase() + '" data-label="' + m.label + '">' + m.label + '<span class="region-tag">China</span></div>';
+    });
+  }
+  if (country.length) {
+    html += '<div class="dropdown-group-label">🌏 Country</div>';
+    country.forEach(function(m) {
+      html += '<div class="dropdown-item" data-key="' + m.label.toLowerCase() + '" data-label="' + m.label + '">' + m.label + '<span class="region-tag">Country</span></div>';
+    });
+  }
+  dropdown.innerHTML = html;
+  dropdown.classList.add('show');
+
+  dropdown.querySelectorAll('.dropdown-item[data-key]').forEach(function(el) {
+    el.addEventListener('mousedown', function(e) {
+      e.preventDefault(); // prevent input blur before click registers
+      var key   = el.getAttribute('data-key');
+      var label = el.getAttribute('data-label');
+      input.value = label;
+      dropdown.classList.remove('show');
+      showResult(key, label);
+    });
+  });
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrapper')) dropdown.classList.remove('show');
+});
+
+function showResult(key, label) {
+  // Resolve a city to its province first, so coverage highlight + routing both work.
+  var prov  = cityToProvince[key] || key;
+  var stKey = routingMap[prov];
+  var note  = ambiguousNote[key] || null;
+  renderResult(stKey || 'gsc', label, !stKey, note, prov);
+}
+
+function renderResult(stKey, originLabel, unknown, note, originKey) {
+  var st = stations[stKey];
+  placeholder.style.display = 'none';
+  resultCard.classList.add('show');
+
+  document.getElementById('originLabel').textContent = 'Origin: ' + originLabel;
+  document.getElementById('stationName').textContent = st.name;
+  document.getElementById('stationBadge').textContent = st.badge;
+
+  var html = '';
+
+  if (st.groupEmail) {
+    html += '<div class="info-row"><div class="info-icon">✉️</div><div>' +
+      '<div class="info-label">Group / Team Email</div>' +
+      '<div class="info-value"><a href="mailto:' + st.groupEmail + '" class="email-link">' + st.groupEmail + '</a>' +
+      '<button class="copy-btn" onclick="copyText(\'' + st.groupEmail + '\', this)">Copy</button></div>' +
+      '</div></div>';
+  }
+
+  html += '<div class="info-row"><div class="info-icon">📞</div><div>' +
+    '<div class="info-label">Phone</div>' +
+    '<div class="info-value">' + st.phone + '</div>' +
+    '</div></div>';
+
+  var contactHtml = st.contacts.map(function(c) {
+    return '<div class="contact-entry"><strong>' + c.name + '</strong> <span class="contact-role">' + c.role + '</span><br>' +
+      '<a href="mailto:' + c.email + '" class="email-link">' + c.email + '</a>' +
+      '<button class="copy-btn" onclick="copyText(\'' + c.email + '\', this)">Copy</button></div>';
+  }).join('');
+
+  html += '<div class="info-row"><div class="info-icon">👤</div><div>' +
+    '<div class="info-label">Key Contacts</div>' +
+    '<div class="info-value">' + contactHtml + '</div>' +
+    '</div></div>';
+
+  html += '<div class="info-row"><div class="info-icon">📍</div><div>' +
+    '<div class="info-label">Office Address</div>' +
+    '<div class="info-value" style="font-size:12px;color:#777;">' + st.address + '</div>' +
+    '</div></div>';
+
+  var chips = st.coverage.map(function(c) {
+    var isMatch = originKey && (c.toLowerCase() === originKey || c.toLowerCase().indexOf(originKey) !== -1);
+    return '<span class="coverage-chip' + (isMatch ? ' highlight' : '') + '">' + c + '</span>';
+  }).join('');
+
+  html += '<div class="info-row"><div class="info-icon">🗺️</div><div>' +
+    '<div class="info-label">Full Coverage Area</div>' +
+    '<div class="coverage-wrap">' + chips + '</div>' +
+    '</div></div>';
+
+  if (unknown) {
+    // Guard: a China-looking origin must never silently route to GSC (Taipei HQ covers TW/SE-Asia only).
+    var raw = (input.value || originLabel).toLowerCase();
+    var looksChina = /china|中国|中國|大陆|大陸|p\.?r\.?c|\bprc\b/.test(raw);
+    if (looksChina) {
+      html += '<div class="warning-banner">⚠️ This looks like a <strong>China</strong> origin but the province/city wasn\'t recognised. <strong>Do NOT use GSC</strong> (it covers Taiwan &amp; SE-Asia only). Search just the province name (e.g. Guangdong, Zhejiang) or add the city to the tool.</div>';
+    } else {
+      html += '<div class="warning-banner">⚠️ "' + originLabel + '" not in standard coverage map — defaulted to <strong>GSC</strong>. Confirm with the team.</div>';
+    }
+  }
+  if (note) {
+    html += '<div class="warning-banner">' + note + '</div>';
+  }
+
+  document.getElementById('resultBody').innerHTML = html;
+}
+
+function copyText(text, btn) {
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand('copy');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    } catch(e) {
+      prompt('Copy this email (Ctrl+C):', text);
+    }
+    document.body.removeChild(ta);
+  }
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      })
+      .catch(fallback);
+  } else {
+    fallback();
+  }
+}
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
